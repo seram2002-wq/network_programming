@@ -46,12 +46,10 @@ class CommandServer:
           - 결과가 정수이면 "8", 아니면 "2.5" 처럼 return
         ★ 보안: 사용자가 보낸 문자열을 eval() 로 실행하면 절대 안 됩니다!
         """
-        # ===== TODO: 이 부분을 완성하세요 (위 설명의 순서를 따라가세요) =====
         parts = expr.split()
         if len(parts) != 3:
-            raise ValueError("형식에 맞지 않는 수식입니다")
-        a_str, op, b_str = parts
-        a, b = float(a_str), float(b_str)
+            raise ValueError("형식: CALC 숫자 연산자 숫자  (예: CALC 3 + 5)")
+        a, op, b = float(parts[0]), parts[1], float(parts[2])
         if op == "+":
             result = a + b
         elif op == "-":
@@ -59,12 +57,10 @@ class CommandServer:
         elif op == "*":
             result = a * b
         elif op == "/":
-            if b == 0:
-                raise ZeroDivisionError("0으로 나눌 수 없습니다")
-            result = a / b
+            result = a / b          # b == 0 이면 ZeroDivisionError
         else:
-            raise ValueError(f"지원하지 않는 연산자: {op}  (+ - * / 만 가능)")
-        return str(int(result)) if result.is_integer() else str(result)
+            raise ValueError(f"지원하지 않는 연산자: {op}")
+        return str(int(result)) if result == int(result) else str(round(result, 6))
 
     def dispatch(self, line: str) -> str:
         """
@@ -81,8 +77,7 @@ class CommandServer:
           QUIT  → "OK BYE"
           그 외 → "ERR 알 수 없는 명령: " + command
         """
-        # ===== TODO: 이 부분을 완성하세요 (위 설명의 순서를 따라가세요) =====
-        command, _, arg = line.partition(" ")
+        command, _, arg = line.strip().partition(" ")
         command = command.upper()
         if command == "HELP":
             return "OK 사용 가능한 명령: " + ", ".join(self.COMMANDS)
@@ -95,11 +90,13 @@ class CommandServer:
         if command == "CALC":
             try:
                 return "OK " + self.calc(arg)
-            except (ValueError, ZeroDivisionError) as e:
+            except ZeroDivisionError:
+                return "ERR 0으로 나눌 수 없습니다"
+            except ValueError as e:
                 return f"ERR {e}"
         if command == "QUIT":
             return "OK BYE"
-        return "ERR 알 수 없는 명령: " + command
+        return f"ERR 알 수 없는 명령: {command}"
 
     # ---------------------------------------------------------------
     # 네트워크 부분
@@ -117,13 +114,13 @@ class CommandServer:
         """
         print(f"[접속] {addr[0]}:{addr[1]}")
         with conn:
-            # ===== TODO: 이 부분을 완성하세요 (위 설명의 순서를 따라가세요) =====
             reader = LineReader(conn)
             while True:
                 line = reader.read_line()
                 if line is None:
                     break
                 reply = self.dispatch(line)
+                print(f"  {line!r:<24} → {reply!r}")
                 send_line(conn, reply)
                 if reply == "OK BYE":
                     break

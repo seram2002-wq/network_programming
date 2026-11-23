@@ -28,9 +28,8 @@ def send_line(sock: socket.socket, text: str) -> None:
     [STEP 1] text 끝에 "\\n" 을 붙이고 bytes 로 바꿔 sendall 합니다.
     주의: text 안에 이미 줄바꿈이 있으면 메시지가 쪼개지므로 공백으로 바꿔 줍니다.
     """
-    # ===== TODO: 이 부분을 완성하세요 (위 설명의 순서를 따라가세요) =====
-    text = text.replace("\r", " ").replace("\n", " ")
-    sock.sendall((text + "\n").encode(ENCODING))
+    clean = text.replace("\n", " ")
+    sock.sendall((clean + "\n").encode(ENCODING))
 
 
 class LineReader:
@@ -56,7 +55,6 @@ class LineReader:
           line, self.buffer = self.buffer.split(b"\\n", 1)   # 첫 \\n 기준으로 둘로 자르기
           return line.decode(ENCODING).rstrip("\\r")
         """
-        # ===== TODO: 이 부분을 완성하세요 (위 설명의 순서를 따라가세요) =====
         while b"\n" not in self.buffer:
             data = self.sock.recv(self.bufsize)
             if not data:
@@ -75,7 +73,6 @@ def send_msg(sock: socket.socket, text: str) -> None:
         body = text.encode(ENCODING)
         sock.sendall(HEADER.pack(len(body)) + body)
     """
-    # ===== TODO: 이 부분을 완성하세요 (위 설명의 순서를 따라가세요) =====
     body = text.encode(ENCODING)
     sock.sendall(HEADER.pack(len(body)) + body)
 
@@ -90,7 +87,6 @@ def recv_exact(sock: socket.socket, n: int) -> bytes | None:
             buf += chunk
         return buf
     """
-    # ===== TODO: 이 부분을 완성하세요 (위 설명의 순서를 따라가세요) =====
     buf = b""
     while len(buf) < n:
         chunk = sock.recv(n - len(buf))
@@ -107,7 +103,6 @@ def recv_msg(sock: socket.socket) -> str | None:
         (length,) = HEADER.unpack(header)
         body = recv_exact(sock, length)
     """
-    # ===== TODO: 이 부분을 완성하세요 (위 설명의 순서를 따라가세요) =====
     header = recv_exact(sock, HEADER.size)
     if header is None:
         return None
