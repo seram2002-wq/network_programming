@@ -92,10 +92,12 @@ def judge(code: int | None) -> str:
       200~399 → "UP",  400~599 → "WARN",  그 외 → "WARN"
     """
     # ===== TODO: 이 부분을 완성하세요 (위 설명의 순서를 따라가세요) =====
-    if int(parts[1])==None:
-        print("DOWN")
-        
-    raise NotImplementedError("STEP 4: 판정 규칙 구현")
+    if code is None:
+        return "DOWN"
+    if 200 <= code <= 399:
+        return "UP"
+    else:
+        return "WARN"
 
 
 def check(host: str, port: int, path: str = "/") -> dict:
@@ -125,7 +127,33 @@ def check(host: str, port: int, path: str = "/") -> dict:
     result = {"target": f"{host}:{port}{path}", "ip": "-", "code": None, "ms": None, "state": "DOWN", "note": ""}
     start = time.perf_counter()
     # ===== TODO: 이 부분을 완성하세요 (위 설명의 순서를 따라가세요) =====
-    raise NotImplementedError("STEP 5: 위 순서대로 점검하고 result 를 채우세요")
+    try:
+        ip = socket.gethostbyname(host)
+        result["ip"] = ip
+
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.settimeout(TIMEOUT)
+            s.connect((ip, port))
+            s.sendall(build_request(host, path))
+            line = read_status_line(s)
+
+        code = parse_status(line)
+        result["code"] = code
+        result["state"] = judge(code)
+        result["note"] = line
+
+    except socket.gaierror:
+        result["note"] = "DNS 실패"
+    except ConnectionRefusedError:
+        result["note"] = "연결 거부 (서버 꺼짐/포트 닫힘)"
+    except socket.timeout:
+        result["note"] = "시간 초과"
+    except (OSError, ValueError) as e:
+        result["note"] = f"오류: {e}"
+    finally:
+        result["ms"] = (time.perf_counter() - start) * 1000
+
+    return result
 
 
 def print_report(results: list[dict]) -> None:
@@ -153,3 +181,14 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
+
+# === 아침 헬스체크  2026-11-23 17:17 ===
+# STATE  TARGET                           IP              CODE     TIME  NOTE
+# ------------------------------------------------------------------------------------------
+# UP     127.0.0.1:8080/                  127.0.0.1        200   30.2ms  HTTP/1.0 200 OK
+# WARN   localhost:8080/no-such-page      127.0.0.1        404   82.8ms  HTTP/1.0 404 File not found
+# DOWN   127.0.0.1:8081/                  127.0.0.1          - 2028.3ms  연결 거부 (서버 꺼짐/포트 닫힘)
+# DOWN   intranet.invalid:80/             -                  -    7.9ms  DNS 실패
+# ------------------------------------------------------------------------------------------
+# UP 1 · WARN 1 · DOWN 2  (총 4대)
